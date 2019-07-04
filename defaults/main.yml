@@ -1,0 +1,6 @@
+---
+# defaults file for ansible-arm-appgw
+subnet_id: "{{ ((ansible_facts.azure_virtualnetworks | selectattr('name', 'search', vnet_name) | list | first).properties.subnets | selectattr('name', 'search', subnet_name) | list | first).id }}"
+sku_name: "standard_small"
+sku_tier: "standard"
+nb_instances: 2

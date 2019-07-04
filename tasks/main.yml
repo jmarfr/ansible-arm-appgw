@@ -1,0 +1,70 @@
+---
+# tasks file for ansible-arm-appgw
+- name: Get vms facts
+  azure_rm_virtualmachine_facts:
+    resource_group: "{{ rg_name }}"
+  register: vms_facts
+
+- name: Get NetworkInterfaces IPs
+  azure_rm_networkinterface_facts:
+    resource_group: "{{ rg_name }}"
+  register: netif_facts
+
+# - name: Set_fact
+#   set_fact: 
+#     vm_ips: {}
+
+- name: Set Fact vm vs netif
+  set_fact:
+    vm_ips: "{{ vm_ips|combine({item.name: (netif_facts.ansible_facts.azure_networkinterfaces | selectattr('name', 'search', item.network_interface_names.0) | list | first).properties.ipConfigurations.0.properties.privateIPAddress }) }}"
+  with_items: "{{ vms_facts.vms }}"
+
+- name: Create application Gateway
+  azure_rm_appgateway:
+    resource_group: "{{ rg_name }}"
+    name: "{{ appgw_name }}"
+    sku:
+      name: "{{ sku_name }}"
+      tier: "{{ sku_tier }}"
+      capacity: "{{ nb_instances }}"
+
+    gateway_ip_configurations:
+      - subnet:
+          id: "{{ subnet_id }}"
+        name: "{{ appgw_name }}_subnet"
+
+    frontend_ip_configurations: "{{ appgw_frontend_ip_configurations }}"
+      # - subnet:
+      #     id: "{{ subnet_id }}"
+      #   name: "{{ appgw_name }}_frontend_ip"
+      #   private_ip_allocation_method: "dynamic"
+
+    frontend_ports: "{{ appgw_frontend_ports }}"
+      # - port: "80"
+      #   name: "{{ appgw_name }}_frontend_port"
+
+    backend_address_pools: "{{ appgw_backend_address_pools }}"
+      # - backend_addresses:
+      #   - ip_address: 10.0.0.4
+      #   name: "{{ appgw_name }}_backend_address_pool"
+
+    backend_http_settings_collection: "{{ appgw_backend_http_settings }}"
+      # - port: 80
+      #   protocol: http
+      #   cookie_based_affinity: enabled
+      #   name: "{{ appgw_name }}_appgateway_http_settings"
+    
+    http_listeners: "{{ appgw_http_listeners }}"
+      # - frontend_ip_configuration: "{{ appgw_name }}_frontend_ip"
+      #   frontend_port: "{{ appgw_name }}_frontend_port"
+      #   name: "{{ appgw_name }}_http_listener"
+
+    request_routing_rules: "{{ appgw_request_routing_rules }}"
+      # - rule_type: Basic
+      #   backend_address_pool: "{{ appgw_name }}_backend_address_pool"
+      #   backend_http_settings: "{{ appgw_name }}_appgateway_http_settings"
+      #   http_listener: "{{ appgw_name }}_http_listener"
+      #   name: "{{ appgw_name }}_rule1"
+
+    probes: "{{ appgw_probes }}"
+

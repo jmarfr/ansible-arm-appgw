@@ -1,0 +1,3 @@
+---
+# vars file for ansible-arm-appgw
+vm_ips: {}
